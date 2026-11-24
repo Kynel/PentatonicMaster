@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Fretboard } from './components/Fretboard'
 import { KeyPad } from './components/KeyPad'
 import { TypingLine } from './components/TypingLine'
+import { TempoBar } from './components/TempoBar'
 import { StatsPanel } from './components/StatsPanel'
 import { BOX_COUNT, getBoxNotes } from './music/boxes'
 import { PATTERNS, getPattern } from './music/patterns'
@@ -190,6 +191,10 @@ export default function App() {
             {running ? '정지 (Space)' : '시작 (Space)'}
           </button>
         </div>
+
+        {s.mode === 'tempo' && (
+          <TempoBar getClock={p.getClock} interval={p.interval} offsets={p.stats.offsets} running={running} />
+        )}
 
         <TypingLine seq={seq} index={p.index} results={p.results} hand={s.hand} loops={p.stats.loops} />
 

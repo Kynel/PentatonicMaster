@@ -243,6 +243,7 @@ export function usePractice(seq: FretNote[], opts: PracticeOptions) {
     if (j === null) {
       e.stats.early++
       e.loopDirty = true
+      e.stats.offsets = [...e.stats.offsets.slice(-31), Math.round(delta * 1000)]
       e.lastJudgement = { j: 'early', at: performance.now() }
     } else {
       if (j === 'wrong') e.stats.wrong++
@@ -297,6 +298,15 @@ export function usePractice(seq: FretNote[], opts: PracticeOptions) {
     force()
   }, [seq, opts.mode, opts.notesPerBeat])
 
+  /** live position on the beat grid, read every animation frame by the beat display */
+  const getClock = useCallback(() => {
+    const en = eng.current
+    if (en.status === 'idle' || optsRef.current.mode !== 'tempo') return null
+    const now = audio.now - optsRef.current.latencyMs / 1000
+    const beats = (now - en.baseTime) / en.interval / optsRef.current.notesPerBeat
+    return { beats, status: en.status }
+  }, [])
+
   const e = eng.current
   const len = seq.length
   return {
@@ -310,5 +320,7 @@ export function usePractice(seq: FretNote[], opts: PracticeOptions) {
     start,
     stop,
     press: (finger: Finger) => handlePress(finger, performance.now()),
+    interval: e.status === 'idle' ? noteInterval(opts.bpm, opts.notesPerBeat) : e.interval,
+    getClock,
   }
 }

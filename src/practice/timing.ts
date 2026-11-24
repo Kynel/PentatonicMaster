@@ -2,8 +2,8 @@ export type Judgement = 'perfect' | 'good' | 'miss' | 'wrong'
 
 /** Timing windows (seconds) scaled to the note interval, with sensible floors/caps. */
 export function windows(interval: number): { perfect: number; good: number } {
-  const good = Math.min(0.15, Math.max(0.06, interval * 0.45))
-  const perfect = Math.min(0.05, Math.max(0.025, interval * 0.18))
+  const good = Math.min(0.18, Math.max(0.08, interval * 0.5))
+  const perfect = Math.min(0.06, Math.max(0.035, interval * 0.2))
   return { perfect, good: Math.max(good, perfect) }
 }
 

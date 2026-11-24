@@ -184,3 +184,28 @@ select:disabled, input:disabled { opacity: 0.5; }
 @keyframes caret { 50% { border-bottom-color: transparent; } }
 @media (max-width: 640px) { .typing-line { font-size: 26px; } }
 @media (prefers-reduced-motion: reduce) { .typing-key.current { animation: none; } }
+
+/* metronome: beat lights + timing gauge */
+.tempo { display: grid; grid-template-columns: auto 1fr; gap: 12px 20px; align-items: center; background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.beats { display: flex; gap: 8px; align-items: center; }
+.beat {
+  width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 800;
+  background: var(--panel); border: 2px solid var(--line); color: var(--muted); transition: background 0.05s;
+}
+.beat.on { background: var(--accent-2); border-color: var(--accent-2); color: #1a1208; }
+.beat.on.down { background: var(--accent); border-color: var(--accent); }
+.beat.count { background: transparent; border-color: var(--accent-2); color: var(--accent-2); font-size: 18px; }
+.beat-caption { color: var(--muted); font-size: 12px; margin-left: 4px; }
+.gauge { min-width: 0; }
+.gauge-track { position: relative; height: 26px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.gauge-good { position: absolute; top: 0; bottom: 0; background: rgba(143, 200, 255, 0.14); }
+.gauge-perfect { position: absolute; top: 0; bottom: 0; background: rgba(92, 201, 138, 0.22); }
+.gauge-center { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px; margin-left: -1px; background: var(--text); }
+.gauge-mark { position: absolute; top: 5px; bottom: 5px; width: 4px; margin-left: -2px; border-radius: 2px; background: var(--muted); transition: left 0.08s; }
+.gauge-mark.perfect { background: var(--ok); }
+.gauge-mark.good { background: var(--good); }
+.gauge-mark.off { background: var(--bad); }
+.gauge-mark.latest { top: 1px; bottom: 1px; width: 6px; margin-left: -3px; box-shadow: 0 0 0 2px var(--panel); }
+.gauge-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 4px; }
+.gauge-verdict { color: var(--text); font-weight: 700; }
+@media (max-width: 640px) { .tempo { grid-template-columns: 1fr; } }
