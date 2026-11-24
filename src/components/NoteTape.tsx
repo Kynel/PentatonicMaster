@@ -11,6 +11,8 @@ interface Props {
   active: boolean
 }
 
+const TECH_LABEL = { h: 'H', p: 'P', s: '/' } as const
+
 const BEHIND = 3
 const AHEAD = 13
 
@@ -31,6 +33,7 @@ export function NoteTape({ seq, index, results, hand, active }: Props) {
       .join(' ')
     items.push(
       <div key={off} className={cls} title={`${STRING_LABELS[n.string]}줄 ${n.fret}프렛`}>
+        {n.tech && <span className="tape-tech">{TECH_LABEL[n.tech]}</span>}
         <span className="tape-finger">{n.finger}</span>
         <span className="tape-key">{keyLabelForFinger(hand, n.finger)}</span>
         <span className="tape-pos">{STRING_LABELS[n.string]} {n.fret}</span>

@@ -9,15 +9,16 @@ export interface KeyBinding {
 }
 
 /**
- * Keyboard finger → guitar fretting finger. Uses KeyboardEvent.code so it works the same
+ * Keyboard key → guitar fretting finger. Keys run left to right in the same direction as the
+ * fretboard drawing (finger 1 nearest the headstock), so A S D F = 1 2 3 4. Uses KeyboardEvent.code so it works the same
  * with a Korean IME or any keyboard layout.
  */
 export const KEYMAPS: Record<Hand, KeyBinding[]> = {
   left: [
-    { code: 'KeyA', label: 'A', finger: 4 },
-    { code: 'KeyS', label: 'S', finger: 3 },
-    { code: 'KeyD', label: 'D', finger: 2 },
-    { code: 'KeyF', label: 'F', finger: 1 },
+    { code: 'KeyA', label: 'A', finger: 1 },
+    { code: 'KeyS', label: 'S', finger: 2 },
+    { code: 'KeyD', label: 'D', finger: 3 },
+    { code: 'KeyF', label: 'F', finger: 4 },
   ],
   right: [
     { code: 'KeyJ', label: 'J', finger: 1 },

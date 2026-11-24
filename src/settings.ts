@@ -3,7 +3,17 @@ import type { ScaleType } from './music/boxes'
 import type { Hand } from './practice/keymap'
 import type { Mode } from './practice/usePractice'
 
+export interface CustomLick {
+  id: string
+  title: string
+  tab: string
+}
+
 export interface Settings {
+  /** practise generated scale patterns or solo licks */
+  source: 'pattern' | 'lick'
+  lickId: string
+  customLicks: CustomLick[]
   keyPc: number
   scale: ScaleType
   box: number
@@ -19,6 +29,9 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
+  source: 'pattern',
+  lickId: 'rock-triplet-roll',
+  customLicks: [],
   keyPc: 9, // A
   scale: 'minor',
   box: 0,

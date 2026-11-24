@@ -1,10 +1,12 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Fretboard } from './components/Fretboard'
 import { KeyPad } from './components/KeyPad'
 import { NoteTape } from './components/NoteTape'
 import { StatsPanel } from './components/StatsPanel'
 import { BOX_COUNT, getBoxNotes } from './music/boxes'
 import { PATTERNS, getPattern } from './music/patterns'
+import { LICKS, STYLE_LABELS, buildLick, type Lick } from './music/licks'
+import { LickEditor } from './components/LickEditor'
 import { NOTE_NAMES, stringLabel } from './music/theory'
 import { FINGER_NAMES, keyLabelForFinger } from './practice/keymap'
 import { usePractice } from './practice/usePractice'
@@ -20,10 +22,29 @@ const SUBDIVISIONS = [
 const JUDGE_TEXT = { perfect: '퍼펙트', good: '굿', miss: '놓침', wrong: '틀림', early: '너무 빠름' } as const
 
 export default function App() {
-  const { settings: s, update } = useSettings()
-  const notes = useMemo(() => getBoxNotes(s.keyPc, s.scale, s.box), [s.keyPc, s.scale, s.box])
+  const { settings: s, update, setSettings } = useSettings()
+  const [editorOpen, setEditorOpen] = useState(false)
+  const boxNotes = useMemo(() => getBoxNotes(s.keyPc, s.scale, s.box), [s.keyPc, s.scale, s.box])
   const pattern = getPattern(s.pattern)
-  const seq = useMemo(() => pattern.build(notes), [pattern, notes])
+  const customLicks: Lick[] = useMemo(
+    () => s.customLicks.map((c) => ({ ...c, style: 'custom' as const, description: '직접 입력한 릭입니다. 적은 프렛 그대로 연습합니다.' })),
+    [s.customLicks],
+  )
+  const allLicks = useMemo(() => [...LICKS, ...customLicks], [customLicks])
+  const lick = allLicks.find((l) => l.id === s.lickId) ?? LICKS[0]
+  const isLick = s.source === 'lick'
+  const seq = useMemo(
+    () => (isLick ? buildLick(lick, s.keyPc, s.scale) : pattern.build(boxNotes)),
+    [isLick, lick, s.keyPc, s.scale, pattern, boxNotes],
+  )
+  // fretboard shows each position once; for licks that is every fret the lick touches
+  const notes = useMemo(() => {
+    if (!isLick) return boxNotes
+    const seen = new Map<string, (typeof seq)[number]>()
+    for (const n of seq) if (!seen.has(`${n.string}-${n.fret}`)) seen.set(`${n.string}-${n.fret}`, n)
+    return [...seen.values()]
+  }, [isLick, boxNotes, seq])
+  const editingCustom = s.customLicks.find((c) => c.id === s.lickId) ?? null
 
   const p = usePractice(seq, {
     mode: s.mode,
@@ -68,23 +89,56 @@ export default function App() {
           </select>
         </label>
         <div className="field">
-          <span>박스 포지션</span>
+          <span>연습 종류</span>
           <div className="segmented">
-            {Array.from({ length: BOX_COUNT }, (_, i) => (
-              <button key={i} type="button" className={s.box === i ? 'on' : ''} onClick={() => update('box', i)}>
-                {i + 1}
-              </button>
-            ))}
+            <button type="button" className={!isLick ? 'on' : ''} onClick={() => update('source', 'pattern')}>
+              스케일 패턴
+            </button>
+            <button type="button" className={isLick ? 'on' : ''} onClick={() => update('source', 'lick')}>
+              솔로 릭
+            </button>
           </div>
         </div>
-        <label>
-          패턴
-          <select value={s.pattern} onChange={(e) => update('pattern', e.target.value)}>
-            {PATTERNS.map((pt) => (
-              <option key={pt.id} value={pt.id}>{pt.label}</option>
-            ))}
-          </select>
-        </label>
+        {!isLick && (
+          <>
+            <div className="field">
+              <span>박스 포지션</span>
+              <div className="segmented">
+                {Array.from({ length: BOX_COUNT }, (_, i) => (
+                  <button key={i} type="button" className={s.box === i ? 'on' : ''} onClick={() => update('box', i)}>
+                    {i + 1}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <label>
+              패턴
+              <select value={s.pattern} onChange={(e) => update('pattern', e.target.value)}>
+                {PATTERNS.map((pt) => (
+                  <option key={pt.id} value={pt.id}>{pt.label}</option>
+                ))}
+              </select>
+            </label>
+          </>
+        )}
+        {isLick && (
+          <label>
+            릭
+            <select id="lick-select" value={lick.id} onChange={(e) => update('lickId', e.target.value)}>
+              {(['rock', 'blues', 'jrock', 'custom'] as const).map((style) => {
+                const group = allLicks.filter((l) => l.style === style)
+                if (group.length === 0) return null
+                return (
+                  <optgroup key={style} label={STYLE_LABELS[style]}>
+                    {group.map((l) => (
+                      <option key={l.id} value={l.id}>{l.title}</option>
+                    ))}
+                  </optgroup>
+                )
+              })}
+            </select>
+          </label>
+        )}
         <div className="field">
           <span>모드</span>
           <div className="segmented">
@@ -125,9 +179,11 @@ export default function App() {
         <div className="stage-head">
           <div>
             <div className="stage-title">
-              {keyName} · 박스 {s.box + 1} · {pattern.label}
+              {isLick ? `${keyName} · ${STYLE_LABELS[lick.style]} · ${lick.title}` : `${keyName} · 박스 ${s.box + 1} · ${pattern.label}`}
             </div>
-            <div className="stage-desc">{pattern.description} ({seq.length}음 한 바퀴)</div>
+            <div className="stage-desc">
+              {isLick ? lick.description : pattern.description} ({seq.length}음 한 바퀴)
+            </div>
           </div>
           <button type="button" className={`start ${running ? 'stop' : ''}`} onClick={() => (running ? p.stop() : void p.start())}>
             {running ? '정지 (Space)' : '시작 (Space)'}
@@ -167,6 +223,37 @@ export default function App() {
       </section>
 
       <StatsPanel stats={p.stats} mode={s.mode} bpm={p.bpm} />
+
+      {isLick && (
+        <section className="options" aria-label="내 릭 입력">
+          <div className="row-head">
+            <strong>내 릭 입력</strong>
+            <button type="button" className="btn" onClick={() => setEditorOpen((o) => !o)}>
+              {editorOpen ? '닫기' : editingCustom ? '이 릭 수정' : '새 릭 만들기'}
+            </button>
+          </div>
+          {editorOpen && (
+            <LickEditor
+              key={editingCustom?.id ?? 'new'}
+              editing={editingCustom}
+              onSave={(c) => {
+                setSettings((prev) => ({
+                  ...prev,
+                  lickId: c.id,
+                  customLicks: prev.customLicks.some((x) => x.id === c.id)
+                    ? prev.customLicks.map((x) => (x.id === c.id ? c : x))
+                    : [...prev.customLicks, c],
+                }))
+                setEditorOpen(false)
+              }}
+              onDelete={(id) => {
+                setSettings((prev) => ({ ...prev, lickId: LICKS[0].id, customLicks: prev.customLicks.filter((x) => x.id !== id) }))
+                setEditorOpen(false)
+              }}
+            />
+          )}
+        </section>
+      )}
 
       <section className="options" aria-label="기타 설정">
         <label>

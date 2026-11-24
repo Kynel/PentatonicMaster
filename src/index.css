@@ -102,6 +102,8 @@ select:disabled, input:disabled { opacity: 0.5; }
 }
 .tape-item.empty { background: transparent; border-style: dashed; opacity: 0.3; }
 .tape-item.loop-start::before { content: ''; position: absolute; left: -3px; top: 6px; bottom: 6px; width: 2px; background: var(--accent); border-radius: 2px; }
+.tape-tech { position: absolute; top: 2px; right: 4px; font-size: 10px; font-weight: 800; color: var(--good); }
+.tape-item.current .tape-tech { color: #1a1208; }
 .tape-finger { font-size: 20px; font-weight: 900; line-height: 1.1; }
 .tape-key { font-size: 11px; color: var(--accent-2); font-weight: 700; }
 .tape-pos { font-size: 10px; color: var(--muted); }
@@ -148,3 +150,20 @@ select:disabled, input:disabled { opacity: 0.5; }
   .key { width: 22%; }
   .bpm input { width: 140px; }
 }
+
+/* licks */
+.lick-editor { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.lick-editor textarea, .lick-editor input[type='text'] {
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; color: var(--text);
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; font-size: 13px; width: 100%;
+}
+.lick-editor textarea { min-height: 72px; resize: vertical; }
+.lick-editor .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.lick-editor .row input[type='text'] { flex: 1; min-width: 160px; font-family: inherit; }
+.btn { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; cursor: pointer; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #1a1208; font-weight: 700; }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.help { color: var(--muted); font-size: 12px; margin: 0; line-height: 1.5; }
+.help code { color: var(--accent-2); }
+.errors { color: var(--bad); font-size: 12px; margin: 0; }
+.row-head { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 8px; }

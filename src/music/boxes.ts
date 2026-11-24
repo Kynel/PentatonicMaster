@@ -11,6 +11,8 @@ export interface FretNote {
   midi: number
   /** true when this note is the tonic of the selected scale */
   isRoot: boolean
+  /** how this note is reached in a lick: hammer-on, pull-off or slide (picked when absent) */
+  tech?: 'h' | 'p' | 's'
 }
 
 type Shape = { start: number; strings: [number, Finger][][] }

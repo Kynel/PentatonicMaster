@@ -56,7 +56,7 @@ export function Fretboard({ notes, target, next }: Props) {
           <g key={`${n.string}-${n.fret}`} className={cls}>
             {isTarget && <circle cx={xNote(n.fret)} cy={yString(n.string)} r={16} className="fb-pulse" />}
             <circle cx={xNote(n.fret)} cy={yString(n.string)} r={11} />
-            <text x={xNote(n.fret)} y={yString(n.string) + 4}>{n.finger}</text>
+            <text x={xNote(n.fret)} y={yString(n.string) + 4}>{isTarget && target ? target.finger : n.finger}</text>
           </g>
         )
       })}
