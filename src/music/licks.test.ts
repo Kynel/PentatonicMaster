@@ -21,17 +21,31 @@ describe('lick tab parser', () => {
   })
 })
 
+describe('key sequences', () => {
+  it('reads a s d f as fingers 1-4 and spaces as group breaks', () => {
+    const { notes, errors } = parseTab('sfdf sa')
+    expect(errors).toEqual([])
+    expect(notes.map((n) => n.finger)).toEqual([2, 4, 3, 4, 2, 1])
+    expect(notes.map((n) => !!n.gap)).toEqual([false, false, false, false, true, false])
+    expect(notes.every((n) => n.string === -1)).toBe(true)
+  })
+  it('accepts j k l ; too and rejects other letters', () => {
+    expect(parseTab('jkl;').notes.map((n) => n.finger)).toEqual([1, 2, 3, 4])
+    expect(parseTab('sfx').errors).toHaveLength(1)
+  })
+})
+
 describe('built-in licks', () => {
   // A minor pentatonic plus the 9th (B) and the blue note (D#)
   const allowed = new Set(['A', 'C', 'D', 'E', 'G', 'B', 'D#'])
-  it.each(LICKS.map((l) => [l.id, l] as const))('%s parses cleanly and stays in A minor', (_, lick) => {
+  it.each(LICKS.filter((l) => l.style !== 'keys').map((l) => [l.id, l] as const))('%s parses cleanly and stays in A minor', (_, lick) => {
     const { notes, errors } = parseTab(lick.tab)
     expect(errors).toEqual([])
     expect(notes.length).toBeGreaterThanOrEqual(8)
     for (const n of notes) expect(allowed.has(midiToName(n.midi))).toBe(true)
   })
   it('transposes to other keys within the playable range', () => {
-    for (const lick of LICKS)
+    for (const lick of LICKS.filter((l) => l.style !== 'keys'))
       for (let k = 0; k < 12; k++) {
         const notes = buildLick(lick, k, 'minor')
         const a = buildLick(lick, 9, 'minor')

@@ -8,7 +8,7 @@ interface Props {
   onDelete: (id: string) => void
 }
 
-const EXAMPLE = '1:8:4 1:5:1p 2:8:4 2:5:1p 3:7:3 3:5:1'
+const EXAMPLE = 'sfdf sfsf dfsf sfsf sasa ffdf sfsf ds'
 
 export function LickEditor({ editing, onSave, onDelete }: Props) {
   const [title, setTitle] = useState(editing?.title ?? '')
@@ -19,12 +19,13 @@ export function LickEditor({ editing, onSave, onDelete }: Props) {
   return (
     <div className="lick-editor">
       <p className="help">
-        탭을 <code>줄:프렛:손가락</code> 형식으로 띄어쓰기해서 적으세요. 줄은 1(가장 얇은 줄)~6, 손가락은 1(검지)~4(새끼)이고
-        생략하면 주변 프렛을 보고 정해요. 끝에 <code>h</code>(해머링), <code>p</code>(풀링), <code>s</code>(슬라이드)를 붙일 수 있고{' '}
-        <code>|</code>는 구분용이에요. 예: <code>{EXAMPLE}</code>
+        솔로에서 손가락이 움직이는 순서를 키로 적으세요. <code>a s d f</code> = 1 2 3 4번 손가락(검지~새끼)이고, 띄어쓰기는
+        묶음 구분이에요. 예: <code>{EXAMPLE}</code>
+        <br />
+        줄과 프렛까지 적고 싶으면 탭 형식(<code>줄:프렛:손가락</code>, 예: <code>1:8:4 1:5:1p 2:8:4</code>)도 쓸 수 있어요.
       </p>
       <div className="row">
-        <input id="lick-title" type="text" placeholder="릭 이름" value={title} onChange={(e) => setTitle(e.target.value)} />
+        <input id="lick-title" type="text" placeholder="패턴 이름" value={title} onChange={(e) => setTitle(e.target.value)} />
       </div>
       <textarea id="lick-tab" placeholder={EXAMPLE} value={tab} onChange={(e) => setTab(e.target.value)} spellCheck={false} />
       {errors.length > 0 && <p className="errors">{errors[0]}</p>}
@@ -34,17 +35,17 @@ export function LickEditor({ editing, onSave, onDelete }: Props) {
           className="btn primary"
           disabled={!canSave}
           onClick={() =>
-            onSave({ id: editing?.id ?? `custom-${Date.now()}`, title: title.trim() || `내 릭 ${new Date().toLocaleDateString()}`, tab: tab.trim() })
+            onSave({ id: editing?.id ?? `custom-${Date.now()}`, title: title.trim() || `내 패턴 ${new Date().toLocaleDateString()}`, tab: tab.trim() })
           }
         >
-          {editing ? '수정 저장' : '내 릭으로 저장'}
+          {editing ? '수정 저장' : '내 패턴으로 저장'}
         </button>
         {editing && (
           <button type="button" className="btn" onClick={() => onDelete(editing.id)}>
-            이 릭 삭제
+            이 패턴 삭제
           </button>
         )}
-        <span className="help">{notes.length}음</span>
+        <span className="help">{notes.length}타</span>
       </div>
     </div>
   )

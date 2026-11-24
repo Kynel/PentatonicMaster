@@ -4,7 +4,7 @@ export type Finger = 1 | 2 | 3 | 4
 export type ScaleType = 'minor' | 'major'
 
 export interface FretNote {
-  /** 0 = low E (6th string) … 5 = high e (1st string) */
+  /** 0 = low E (6th string) … 5 = high e (1st string); -1 when only the finger is known */
   string: number
   fret: number
   finger: Finger
@@ -13,6 +13,8 @@ export interface FretNote {
   isRoot: boolean
   /** how this note is reached in a lick: hammer-on, pull-off or slide (picked when absent) */
   tech?: 'h' | 'p' | 's'
+  /** true when a new group starts at this note (shown as a space in the key line) */
+  gap?: boolean
 }
 
 type Shape = { start: number; strings: [number, Finger][][] }

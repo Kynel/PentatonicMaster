@@ -25,6 +25,7 @@ export interface Settings {
   speedStep: number
   hand: Hand
   sound: boolean
+  showFretboard: boolean
   latencyMs: number
 }
 
@@ -43,6 +44,7 @@ export const DEFAULT_SETTINGS: Settings = {
   speedStep: 4,
   hand: 'left',
   sound: true,
+  showFretboard: false,
   latencyMs: 0,
 }
 

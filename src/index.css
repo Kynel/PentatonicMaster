@@ -167,3 +167,20 @@ select:disabled, input:disabled { opacity: 0.5; }
 .help code { color: var(--accent-2); }
 .errors { color: var(--bad); font-size: 12px; margin: 0; }
 .row-head { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 8px; }
+
+/* typing line */
+.typing { display: flex; flex-direction: column; gap: 8px; padding: 8px 0 4px; }
+.typing-line {
+  display: flex; flex-wrap: wrap; row-gap: 10px; align-items: baseline;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; font-size: 34px; font-weight: 700;
+  letter-spacing: 0.02em; line-height: 1.2;
+}
+.typing-key { color: var(--muted); padding: 0 1px; border-bottom: 3px solid transparent; transition: color 0.06s; }
+.typing-key.current { color: var(--accent-2); border-bottom-color: var(--accent); animation: caret 1s steps(1) infinite; }
+.typing-key.done.perfect, .typing-key.done.good { color: var(--ok); }
+.typing-key.done.wrong, .typing-key.done.miss { color: var(--bad); text-decoration: underline wavy; }
+.typing-gap { width: 0.6em; }
+.typing-meta { color: var(--muted); font-size: 12px; }
+@keyframes caret { 50% { border-bottom-color: transparent; } }
+@media (max-width: 640px) { .typing-line { font-size: 26px; } }
+@media (prefers-reduced-motion: reduce) { .typing-key.current { animation: none; } }

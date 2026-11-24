@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Fretboard } from './components/Fretboard'
 import { KeyPad } from './components/KeyPad'
-import { NoteTape } from './components/NoteTape'
+import { TypingLine } from './components/TypingLine'
 import { StatsPanel } from './components/StatsPanel'
 import { BOX_COUNT, getBoxNotes } from './music/boxes'
 import { PATTERNS, getPattern } from './music/patterns'
@@ -27,21 +27,22 @@ export default function App() {
   const boxNotes = useMemo(() => getBoxNotes(s.keyPc, s.scale, s.box), [s.keyPc, s.scale, s.box])
   const pattern = getPattern(s.pattern)
   const customLicks: Lick[] = useMemo(
-    () => s.customLicks.map((c) => ({ ...c, style: 'custom' as const, description: '직접 입력한 릭입니다. 적은 프렛 그대로 연습합니다.' })),
+    () => s.customLicks.map((c) => ({ ...c, style: 'custom' as const, description: '직접 입력한 손가락 순서입니다.' })),
     [s.customLicks],
   )
   const allLicks = useMemo(() => [...LICKS, ...customLicks], [customLicks])
   const lick = allLicks.find((l) => l.id === s.lickId) ?? LICKS[0]
   const isLick = s.source === 'lick'
-  const seq = useMemo(
-    () => (isLick ? buildLick(lick, s.keyPc, s.scale) : pattern.build(boxNotes)),
-    [isLick, lick, s.keyPc, s.scale, pattern, boxNotes],
-  )
+  const seq = useMemo(() => {
+    if (isLick) return buildLick(lick, s.keyPc, s.scale)
+    // scale patterns: start a new key group whenever the pattern moves to another string
+    return pattern.build(boxNotes).map((n, i, all) => ({ ...n, gap: i > 0 && all[i - 1].string !== n.string }))
+  }, [isLick, lick, s.keyPc, s.scale, pattern, boxNotes])
   // fretboard shows each position once; for licks that is every fret the lick touches
   const notes = useMemo(() => {
     if (!isLick) return boxNotes
     const seen = new Map<string, (typeof seq)[number]>()
-    for (const n of seq) if (!seen.has(`${n.string}-${n.fret}`)) seen.set(`${n.string}-${n.fret}`, n)
+    for (const n of seq) if (n.string >= 0 && !seen.has(`${n.string}-${n.fret}`)) seen.set(`${n.string}-${n.fret}`, n)
     return [...seen.values()]
   }, [isLick, boxNotes, seq])
   const editingCustom = s.customLicks.find((c) => c.id === s.lickId) ?? null
@@ -69,7 +70,7 @@ export default function App() {
         <h1>
           펜타토닉 <span>손가락 운동기</span>
         </h1>
-        <p className="tagline">기타 솔로 운지 패턴을 키보드로 미리 손에 익히세요.</p>
+        <p className="tagline">솔로에서 손가락이 움직이는 순서를 키보드로 정확하고 빠르게 쳐서 손에 익히세요. a s d f = 검지 중지 약지 새끼.</p>
       </header>
 
       <section className="controls" aria-label="연습 설정">
@@ -125,7 +126,7 @@ export default function App() {
           <label>
             릭
             <select id="lick-select" value={lick.id} onChange={(e) => update('lickId', e.target.value)}>
-              {(['rock', 'blues', 'jrock', 'custom'] as const).map((style) => {
+              {(['keys', 'rock', 'blues', 'jrock', 'custom'] as const).map((style) => {
                 const group = allLicks.filter((l) => l.style === style)
                 if (group.length === 0) return null
                 return (
@@ -182,7 +183,7 @@ export default function App() {
               {isLick ? `${keyName} · ${STYLE_LABELS[lick.style]} · ${lick.title}` : `${keyName} · 박스 ${s.box + 1} · ${pattern.label}`}
             </div>
             <div className="stage-desc">
-              {isLick ? lick.description : pattern.description} ({seq.length}음 한 바퀴)
+              {isLick ? lick.description : pattern.description} 
             </div>
           </div>
           <button type="button" className={`start ${running ? 'stop' : ''}`} onClick={() => (running ? p.stop() : void p.start())}>
@@ -190,15 +191,15 @@ export default function App() {
           </button>
         </div>
 
-        <Fretboard notes={notes} target={running || s.mode === 'free' ? target : null} next={running ? next : null} />
+        <TypingLine seq={seq} index={p.index} results={p.results} hand={s.hand} loops={p.stats.loops} />
 
         <div className="now">
           {target && (
             <div className="now-target">
               <span className="now-finger">{target.finger}</span>
               <span>
-                <strong>{FINGER_NAMES[target.finger]}</strong> ({keyLabelForFinger(s.hand, target.finger)} 키) ·{' '}
-                {stringLabel(target.string)} {target.fret}프렛
+                <strong>{keyLabelForFinger(s.hand, target.finger)} 키</strong> · {FINGER_NAMES[target.finger]}
+                {target.string >= 0 && ` · ${stringLabel(target.string)} ${target.fret}프렛`}
               </span>
             </div>
           )}
@@ -212,8 +213,11 @@ export default function App() {
           </div>
         </div>
 
-        <NoteTape seq={seq} index={p.index} results={p.results} hand={s.hand} active={running} />
         <KeyPad hand={s.hand} target={running || s.mode === 'free' ? target?.finger ?? null : null} pressed={p.pressed} onPress={p.press} />
+
+        {s.showFretboard && notes.length > 0 && (
+          <Fretboard notes={notes} target={running || s.mode === 'free' ? target : null} next={running ? next : null} />
+        )}
 
         <p className="hint">
           {s.mode === 'free'
@@ -225,11 +229,11 @@ export default function App() {
       <StatsPanel stats={p.stats} mode={s.mode} bpm={p.bpm} />
 
       {isLick && (
-        <section className="options" aria-label="내 릭 입력">
+        <section className="options" aria-label="내 패턴 입력">
           <div className="row-head">
-            <strong>내 릭 입력</strong>
+            <strong>내 패턴 입력</strong>
             <button type="button" className="btn" onClick={() => setEditorOpen((o) => !o)}>
-              {editorOpen ? '닫기' : editingCustom ? '이 릭 수정' : '새 릭 만들기'}
+              {editorOpen ? '닫기' : editingCustom ? '이 패턴 수정' : '새 패턴 만들기'}
             </button>
           </div>
           {editorOpen && (
@@ -266,6 +270,10 @@ export default function App() {
         <label className="check">
           <input type="checkbox" checked={s.sound} onChange={(e) => update('sound', e.target.checked)} />
           기타 소리
+        </label>
+        <label className="check">
+          <input type="checkbox" checked={s.showFretboard} onChange={(e) => update('showFretboard', e.target.checked)} />
+          지판 함께 보기
         </label>
         {s.mode === 'tempo' && (
           <label className="bpm">

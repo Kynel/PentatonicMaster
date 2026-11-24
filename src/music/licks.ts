@@ -2,7 +2,7 @@ import type { Finger, FretNote, ScaleType } from './boxes'
 import { minorRootPc } from './boxes'
 import { TUNING } from './theory'
 
-export type LickStyle = 'rock' | 'blues' | 'jrock' | 'custom'
+export type LickStyle = 'keys' | 'rock' | 'blues' | 'jrock' | 'custom'
 
 export interface Lick {
   id: string
@@ -18,14 +18,22 @@ export interface Lick {
 }
 
 export const STYLE_LABELS: Record<LickStyle, string> = {
+  keys: '키 순서',
   rock: '록',
   blues: '블루스',
   jrock: 'J-rock 스타일',
-  custom: '내 릭',
+  custom: '내 패턴',
 }
 
 /** Original practice licks in the style of each genre, all written in A minor. */
 export const LICKS: Lick[] = [
+  {
+    id: 'keys-solo-example',
+    title: '빠른 솔로 손가락 순서 (예시)',
+    style: 'keys',
+    description: '중지·새끼·약지를 빠르게 오가는 솔로 손가락 순서입니다. 키 순서만으로 연습합니다.',
+    tab: 'sfdfsfsfdfsfsfsfsasaffdfsfsfds',
+  },
   {
     id: 'rock-triplet-roll',
     title: '1·2번줄 트리플렛 롤',
@@ -105,14 +113,50 @@ export interface ParseResult {
   errors: string[]
 }
 
+const LETTER_FINGERS: Record<string, Finger> = { a: 1, s: 2, d: 3, f: 4, j: 1, k: 2, l: 3, ';': 4 }
+/** Pitches used to sound key-only patterns: A B C D on the high e string. */
+const LETTER_MIDI: Record<Finger, number> = { 1: 69, 2: 71, 3: 72, 4: 74 }
+
+/** True when the text is a plain key sequence like "sfdf sfsf" rather than tab notation. */
+export function isKeySequence(text: string): boolean {
+  return !text.includes(':')
+}
+
+function parseKeys(text: string): ParseResult {
+  const notes: FretNote[] = []
+  const errors: string[] = []
+  let gap = false
+  for (const ch of text.toLowerCase()) {
+    if (/[\s|,]/.test(ch)) {
+      gap = notes.length > 0
+      continue
+    }
+    const finger = LETTER_FINGERS[ch]
+    if (!finger) {
+      if (errors.length === 0) errors.push(`"${ch}"는 쓸 수 없어요. a s d f (또는 j k l ;)만 적어주세요.`)
+      continue
+    }
+    notes.push({ string: -1, fret: 0, finger, midi: LETTER_MIDI[finger], isRoot: false, gap })
+    gap = false
+  }
+  return { notes, errors }
+}
+
 /**
- * Parse tab notation into notes (pitch only; key/root are applied by `buildLick`).
- * A missing finger is guessed from the frets around the note.
+ * Parse a lick: either a plain key sequence ("sfdfsf", a=1 … f=4) or tab notation
+ * (`string:fret[:finger][tech]`). In tab notation a missing finger is guessed from the frets
+ * around the note, and `|` starts a new group.
  */
 export function parseTab(tab: string): ParseResult {
+  if (isKeySequence(tab)) return parseKeys(tab)
   const errors: string[] = []
-  const raw: { string: number; fret: number; finger: number | null; tech?: 'h' | 'p' | 's' }[] = []
-  for (const token of tab.split(/[\s,|]+/).filter(Boolean)) {
+  const raw: { string: number; fret: number; finger: number | null; tech?: 'h' | 'p' | 's'; gap: boolean }[] = []
+  let gap = false
+  for (const token of tab.split(/[\s,]+/).filter(Boolean)) {
+    if (token === '|') {
+      gap = raw.length > 0
+      continue
+    }
     const m = /^([1-6]):(\d{1,2})(?::([1-4]))?([hps])?$/i.exec(token)
     if (!m) {
       errors.push(`"${token}"을(를) 읽을 수 없어요. 줄:프렛:손가락 형식(예: 1:8:4)으로 적어주세요.`)
@@ -129,7 +173,9 @@ export function parseTab(tab: string): ParseResult {
       fret,
       finger: m[3] ? Number(m[3]) : null,
       tech: tech && TECHS.has(tech) ? (tech as 'h' | 'p' | 's') : undefined,
+      gap,
     })
+    gap = false
   }
   const notes = raw.map((n, i) => {
     let finger = n.finger
@@ -146,6 +192,7 @@ export function parseTab(tab: string): ParseResult {
       midi: TUNING[n.string] + n.fret,
       isRoot: false,
       tech: n.tech,
+      gap: n.gap,
     }
   })
   return { notes, errors }
@@ -158,6 +205,7 @@ export function parseTab(tab: string): ParseResult {
 export function buildLick(lick: Lick, keyPc: number, scale: ScaleType): FretNote[] {
   const { notes } = parseTab(lick.tab)
   if (notes.length === 0) return []
+  if (notes[0].string < 0) return notes
   const up = (((minorRootPc(keyPc, scale) - 9) % 12) + 12) % 12
   const frets = notes.map((n) => n.fret)
   const lo = Math.min(...frets)
