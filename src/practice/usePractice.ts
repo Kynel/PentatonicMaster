@@ -54,6 +54,8 @@ interface Engine {
   nextClickSlot: number
   lastJudgement: { j: Judgement | 'early'; at: number } | null
   pressed: { finger: Finger; ok: boolean; at: number } | null
+  /** an early press happened in this loop, so it does not count as clean */
+  loopDirty: boolean
   timer: number | null
   raf: number | null
 }
@@ -68,7 +70,7 @@ export function usePractice(seq: FretNote[], opts: PracticeOptions) {
   const eng = useRef<Engine>({
     status: 'idle', k: 0, results: [], stats: emptyStats(), bpm: opts.bpm, interval: 0,
     baseTime: 0, baseIndex: 0, nextClickSlot: 0, lastJudgement: null, pressed: null,
-    timer: null, raf: null,
+    timer: null, raf: null, loopDirty: false,
   })
 
   const expected = (k: number) => {
@@ -111,7 +113,8 @@ export function usePractice(seq: FretNote[], opts: PracticeOptions) {
     e.k++
     if (e.k % len === 0) {
       s.loops++
-      const clean = e.results.length === len && e.results.every((r) => r === 'perfect' || r === 'good')
+      const clean =
+        !e.loopDirty && e.results.length === len && e.results.every((r) => r === 'perfect' || r === 'good')
       if (clean) s.cleanLoops++
       const o = optsRef.current
       if (o.mode === 'tempo' && o.autoSpeed && clean) {
@@ -123,6 +126,7 @@ export function usePractice(seq: FretNote[], opts: PracticeOptions) {
         o.onBpmChange?.(e.bpm)
       }
       e.results = []
+      e.loopDirty = false
     }
   }
 
@@ -167,6 +171,7 @@ export function usePractice(seq: FretNote[], opts: PracticeOptions) {
     const o = optsRef.current
     e.k = 0
     e.results = []
+    e.loopDirty = false
     e.stats = emptyStats()
     e.lastJudgement = null
     e.bpm = o.bpm
@@ -192,21 +197,24 @@ export function usePractice(seq: FretNote[], opts: PracticeOptions) {
     const o = optsRef.current
     const seq = seqRef.current
     if (seq.length === 0) return
+
+    if (e.status === 'idle' && o.mode === 'free') {
+      // free mode starts on the first press, from the first note
+      void audio.resume()
+      e.k = 0
+      e.results = []
+      e.loopDirty = false
+      e.stats = emptyStats()
+      e.status = 'running'
+    }
+
     const target = seq[e.k % seq.length]
     const ok = finger === target.finger
     e.pressed = { finger, ok, at: performance.now() }
 
     if (e.status === 'idle') {
-      if (o.mode !== 'free') {
-        force()
-        return
-      }
-      // free mode starts on the first press
-      void audio.resume()
-      e.k = 0
-      e.results = []
-      e.stats = emptyStats()
-      e.status = 'running'
+      force()
+      return
     }
 
     if (o.mode === 'free') {
@@ -234,6 +242,7 @@ export function usePractice(seq: FretNote[], opts: PracticeOptions) {
     const j = judgePress(delta, ok, e.interval)
     if (j === null) {
       e.stats.early++
+      e.loopDirty = true
       e.lastJudgement = { j: 'early', at: performance.now() }
     } else {
       if (j === 'wrong') e.stats.wrong++
@@ -246,8 +255,12 @@ export function usePractice(seq: FretNote[], opts: PracticeOptions) {
   // keyboard handling
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => {
-      const tag = (ev.target as HTMLElement | null)?.tagName
-      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return
+      const el = ev.target as HTMLElement | null
+      // typing into text fields must not trigger practice keys
+      if (el && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && (el as HTMLInputElement).type === 'text'))) return
+      const practiceKey = ev.code === 'Space' || fingerForCode(optsRef.current.hand, ev.code) !== null
+      // after changing a setting, focus stays on that control: hand practice keys back to the app
+      if (practiceKey && el && el !== document.body && (el.tagName === 'SELECT' || el.tagName === 'INPUT' || el.tagName === 'BUTTON')) el.blur()
       if (ev.code === 'Space') {
         ev.preventDefault()
         if (ev.repeat) return
@@ -278,6 +291,7 @@ export function usePractice(seq: FretNote[], opts: PracticeOptions) {
     e.status = 'idle'
     e.k = 0
     e.results = []
+    e.loopDirty = false
     e.stats = emptyStats()
     e.lastJudgement = null
     force()
